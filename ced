@@ -1,0 +1,130 @@
+#!/bin/sh
+#
+# Use sed to colourise output.
+#
+# Two modes of operation:
+# 1.  Run a sed script with terminal colour codes defined.
+# 2.  Compile a sed script to a file for future use.
+#
+
+RUNSCRIPT=1
+COLOURS="$(mktemp "/tmp/cedcolours.XXXXXX")"
+
+# Create colour replacement script
+(cat <<EOF
+s/<black>/$(echo -ne "\e[0;30m")/g
+s/<red>/$(echo -ne "\e[0;31m")/g
+s/<green>/$(echo -ne "\e[0;32m")/g
+s/<brown>/$(echo -ne "\e[0;33m")/g
+s/<blue>/$(echo -ne "\e[0;34m")/g
+s/<purple>/$(echo -ne "\e[0;35m")/g
+s/<cyan>/$(echo -ne "\e[0;36m")/g
+s/<lightgrey>/$(echo -ne "\e[0;37m")/g
+s/<darkgrey>/$(echo -ne "\e[1;30m")/g
+s/<lightred>/$(echo -ne "\e[1;31m")/g
+s/<lightgreen>/$(echo -ne "\e[1;32m")/g
+s/<yellow>/$(echo -ne "\e[1;33m")/g
+s/<lightblue>/$(echo -ne "\e[1;34m")/g
+s/<lightpurple>/$(echo -ne "\e[1;35m")/g
+s/<lightcyan>/$(echo -ne "\e[1;36m")/g
+s/<white>/$(echo -ne "\e[1;37m")/g
+s/<reset>/$(echo -ne "\e[0m")/g
+EOF
+) >"$COLOURS"
+
+
+function usage ()
+{
+    (cat <<EOF
+
+Colourise command output via sed and ANSI colour codes.
+
+Usage: command | ced rules.ced ...
+       ced -o baked.sed rules.ced ...
+
+Ced takes one or more input rule files and compiles them into a single 'baked'
+sed script.
+If the -o option is used then the baked file is written out for 
+future use with sed.
+If no output file is specified then run the baked script on stdin.
+
+Options:
+    -h                 Print this message.
+    -o <filename>      Save baked scripts as a sed script in file.
+
+Rule syntax:
+
+This is a normal sed script, except that any occurrences of "<colour>" is
+replaced with the ANSI escape code to set that colour, where colour can be:
+
+    <black>black<reset>          black
+    <red>red<reset>            red
+    <green>green<reset>          green
+    <brown>brown<reset>          brown
+    <blue>blue<reset>           blue
+    <purple>purple<reset>         purple
+    <cyan>cyan<reset>           cyan
+    <lightgrey>lightgrey<reset>      lightgrey
+    <darkgrey>darkgrey<reset>       darkgrey
+    <lightred>lightred<reset>       lightred
+    <lightgreen>lightgreen<reset>     lightgreen
+    <yellow>yellow<reset>         yellow
+    <lightblue>lightblue<reset>      lightblue
+    <lightpurple>lightpurple<reset>    lightpurple
+    <lightcyan>lightcyan<reset>      lightcyan
+    <white>white<reset>          white
+
+    reset (restores default colour)
+
+Examples:
+
+    # Colour the word "error" red
+    s/\berror\b/<red\>&<reset\>/ig
+    # Print warning in yellow and the numeric code in blue
+    s/^warning ([0-9]+)/<yellow\>warning <blue\>\1<reset\>/g
+
+EOF
+) | sed -f "$COLOURS" -e 's/\\>/>/g'
+}
+
+
+# Options
+
+while getopts 'ho:' OPTION ; do
+    case $OPTION in
+        h)
+            usage >&2
+            exit 0
+            ;;
+        o)
+            OUTFILE="$OPTARG"
+            RUNSCRIPT=0
+            ;;
+        ?)
+            usage >&2
+            exit 1
+            ;;
+    esac
+done
+shift $(($OPTIND - 1))
+
+# If no ouput file was specified use a temp file and run the script on stdin.
+
+if [ -z "$OUTFILE" ] ; then
+    OUTFILE="$(mktemp "/tmp/cedbaked.XXXXXX")"
+    trap "rm -f $OUTFILE $COLOURS" EXIT
+else
+    trap "rm -f $COLOURS" EXIT
+fi
+
+# Replace <colour>s in rule files with escape codes
+
+cat "$@" | sed -f "$COLOURS" >"$OUTFILE"
+
+# Apply or save script
+
+if [ $RUNSCRIPT == 0 ] ; then
+    exit
+fi
+
+sed -rf $OUTFILE

@@ -1,0 +1,26 @@
+s/^\S[^:]+:[0-9]+:[0-9]+:\s+note:.*$/<lightgrey>&<reset>/
+t
+s/^(In file included)?\s+from\s.*$/<lightgrey>&<reset>/
+t
+s/^(\S[^:]+):([0-9]+):(.*\swarning:.*)$/<green>\1<reset>:<blue>\2<reset>:<yellow>\3<reset>/
+t SRCWARN
+s/^(\S[^:]+):([0-9]+):(.*\serror:.*)$/<green>\1<reset>:<blue>\2<reset>:<red>\3<reset>/
+t SRCERR
+s/^(\S[^:]+):(\(.+\)):(.*)$/<green>\1<reset>:\2:<red>\3<reset>/
+t SRCLINK
+s/^(\S[^:]+):(.+):$/<purple>&<reset>/
+t SRCINTRO
+s/(\s-o\s+)(\S+)/\1<cyan>\2<reset>/g
+b
+: SRCWARN
+s/'([^']+)'/'<cyan>\1<yellow>'/g
+b
+: SRCERR
+s/'([^']+)'/'<cyan>\1<red>'/g
+b
+: SRCLINK
+s/`([^']+)'/`<cyan>\1<red>'/g
+b
+: SRCINTRO
+s/'([^']+)'/'<cyan>\1<purple>'/g
+b

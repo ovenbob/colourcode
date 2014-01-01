@@ -1,0 +1,80 @@
+#!/bin/sh
+
+# Syntax:
+#
+# hilite [-d <char>] [-c <colour>] [-p] <pattern>
+#
+#
+
+TEMP_CED="$(mktemp /tmp/hilite.XXXXXXXX)"
+trap "rm $TEMP_CED" EXIT
+SED_SEP='%'
+COLOUR='red'
+
+usage ()
+{
+cat <<EOF
+
+Usage: cmd | $(basename "$0") [-d <char>] [-c <colour>] [-p] <pattern> ...
+
+Apply coloured highlighting to any patterns found in the input from cmd.
+Multiple instances of each option and pattern may be specified, options
+change the handling of any patterns that follow them.
+Patterns are "sed -r" extended regexs.
+
+Options:
+
+    -h             Print this help message.
+
+    -d char        Change the delimiter used internally, use this if the
+                   pattern contains the default delimiter: '${SED_SEP}'.
+
+    -c colour      Change the colour used for highlighting, default: ${COLOUR}.
+
+    -p pattern     Prevent pattern being interpreted as an option, otherwise
+                   this is the same as specifying a pattern on its own.
+
+See "ced -h" for a list of valid colours.
+
+EOF
+}
+
+append_pattern ()
+{
+    if [[ "$1" == *${SED_SEP}* ]] ; then
+        SED_SEP='£'
+    fi
+    if [[ "$1" == *${SED_SEP}* ]] ; then
+        echo "Pattern: '$1' contains default delimiters use -d to specify a custom one" >&2
+        exit 1
+    fi
+
+    echo "s${SED_SEP}${1}${SED_SEP}<${COLOUR}>&<reset>${SED_SEP}g" >>$TEMP_CED
+}
+
+while [ $# -gt 0 ] ; do
+    case ${1} in
+        -h)
+            usage
+            exit 0
+            ;;
+        -d)
+            SED_SEP="${2-£}"
+            shift 2
+            ;;
+        -c)
+            COLOUR="${2-red}"
+            shift 2
+            ;;
+        -p)
+            append_pattern "${2-banana}"
+            shift 2
+            ;;
+        *)
+            append_pattern "${1-banana}"
+            shift 1
+            ;;
+    esac
+done
+
+ced $TEMP_CED

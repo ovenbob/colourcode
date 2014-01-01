@@ -1,0 +1,16 @@
+
+ced
+---
+Wrapper around sed the makes it easy to insert colour codes into outputs.
+
+make.ced
+--------
+Highlight error and warning messages in gcc output.
+
+colourmake
+----------
+Pipe make through make.ced 
+
+hilite
+------
+Highlight regex patterns in colours.
